@@ -5,6 +5,13 @@ use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+pub fn create_app() -> Router {
+    Router::new()
+        .route("/api/reset", post(handle_reset))
+        .route("/api/upload", post(handle_upload))
+        .route("/api/homomorphic-sum", post(handle_homomorphic_sum))
+}
+
 #[tokio::main]
 async fn main() {
     // 1. Initialize SQLite database
@@ -15,10 +22,7 @@ async fn main() {
     println!("Database initialized successfully.");
 
     // 2. Configure Axum Router
-    let app = Router::new()
-        .route("/api/reset", post(handle_reset))
-        .route("/api/upload", post(handle_upload))
-        .route("/api/homomorphic-sum", post(handle_homomorphic_sum));
+    let app = create_app();
 
     // 3. Start Tokio Listener
     let addr = "127.0.0.1:8000";
@@ -213,4 +217,102 @@ async fn handle_homomorphic_sum() -> impl IntoResponse {
         }),
     )
         .into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::response::IntoResponse;
+    use axum::http::StatusCode;
+    use std::fs;
+
+    // Use a helper to clean/init db for testing
+    fn setup_db() {
+        let _ = fs::remove_file("cloud_db_test.sqlite");
+        db::init_db().expect("Failed to init test db");
+    }
+
+    fn teardown_db() {
+        let _ = fs::remove_file("cloud_db_test.sqlite");
+    }
+
+    #[tokio::test]
+    async fn test_handle_reset() {
+        let _lock = db::TEST_MUTEX.lock().unwrap();
+        setup_db();
+        // Insert a dummy key to verify it is deleted by reset
+        db::set_public_key_n("111").unwrap();
+
+        let response = handle_reset().await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Verify it was actually reset
+        let pk = db::get_public_key_n().unwrap();
+        assert!(pk.is_none());
+        teardown_db();
+    }
+
+    #[tokio::test]
+    async fn test_handle_upload_invalid_key() {
+        let _lock = db::TEST_MUTEX.lock().unwrap();
+        setup_db();
+        let payload = UploadRequest {
+            public_key_n: "abc_not_a_number".to_string(),
+            products: vec![],
+        };
+        let response = handle_upload(Json(payload)).await.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        teardown_db();
+    }
+
+    #[tokio::test]
+    async fn test_handle_upload_and_sum() {
+        let _lock = db::TEST_MUTEX.lock().unwrap();
+        setup_db();
+
+        // 1. Generate keys from paillier-crypto to have valid mathematical ciphertexts
+        let (pk, sk) = paillier_crypto::generate_keys(128);
+
+        // Encrypt some prices
+        let c1 = pk.encrypt(&BigUint::from(100u32));
+        let c2 = pk.encrypt(&BigUint::from(250u32));
+
+        let payload = UploadRequest {
+            public_key_n: pk.n.to_string(),
+            products: vec![
+                EncryptedProductInput {
+                    name: "Item 1".to_string(),
+                    encrypted_price: c1.to_string(),
+                },
+                EncryptedProductInput {
+                    name: "Item 2".to_string(),
+                    encrypted_price: c2.to_string(),
+                },
+            ],
+        };
+
+        // 2. Upload products
+        let upload_res = handle_upload(Json(payload)).await.into_response();
+        assert_eq!(upload_res.status(), StatusCode::OK);
+
+        // 3. Compute homomorphic sum
+        let sum_res = handle_homomorphic_sum().await.into_response();
+        assert_eq!(sum_res.status(), StatusCode::OK);
+
+        // Read body to verify correctness
+        let body_bytes = axum::body::to_bytes(sum_res.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(body_json["status"], "success");
+        let enc_sum_str = body_json["encrypted_sum"].as_str().unwrap();
+        let enc_sum = BigUint::from_str(enc_sum_str).unwrap();
+
+        // Decrypt sum
+        let dec_sum = sk.decrypt(&enc_sum, &pk);
+        assert_eq!(dec_sum, BigUint::from(350u32));
+
+        teardown_db();
+    }
 }

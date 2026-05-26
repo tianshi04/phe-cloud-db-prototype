@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=========================================================");
 
     // 1. Generate/Check synthetic dataset
-    generate_synthetic_data(1000)?;
+    generate_synthetic_data(CSV_PATH, 1000)?;
 
     // 2. Setup reqwest client
     let http_client = reqwest::Client::new();
@@ -94,7 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Done! ({:.2} ms)", key_gen_duration);
 
         // B. Read Product Data
-        let products = read_synthetic_data()?;
+        let products = read_synthetic_data(CSV_PATH)?;
         let count = products.len();
 
         // C. Local Encryption
@@ -232,21 +232,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Generates 1,000 synthetic products with random prices into a CSV file if not already present.
-fn generate_synthetic_data(num_records: usize) -> Result<(), Box<dyn std::error::Error>> {
-    if Path::new(CSV_PATH).exists() {
+fn generate_synthetic_data(path: &str, num_records: usize) -> Result<(), Box<dyn std::error::Error>> {
+    if Path::new(path).exists() {
         println!(
             "Synthetic dataset already exists at '{}'. Skipping generation.",
-            CSV_PATH
+            path
         );
         return Ok(());
     }
 
     println!("Generating {} synthetic product records...", num_records);
-    if let Some(parent) = Path::new(CSV_PATH).parent() {
+    if let Some(parent) = Path::new(path).parent() {
         create_dir_all(parent)?;
     }
 
-    let mut file = File::create(CSV_PATH)?;
+    let mut file = File::create(path)?;
     writeln!(file, "name,price")?;
 
     let mut rng = rand::thread_rng();
@@ -256,13 +256,13 @@ fn generate_synthetic_data(num_records: usize) -> Result<(), Box<dyn std::error:
         writeln!(file, "Product #{:04},{}", i, price)?;
     }
 
-    println!("Dataset generated successfully at '{}'.", CSV_PATH);
+    println!("Dataset generated successfully at '{}'.", path);
     Ok(())
 }
 
 /// Reads synthetic dataset from CSV.
-fn read_synthetic_data() -> Result<Vec<ProductRecord>, Box<dyn std::error::Error>> {
-    let file = File::open(CSV_PATH)?;
+fn read_synthetic_data(path: &str) -> Result<Vec<ProductRecord>, Box<dyn std::error::Error>> {
+    let file = File::open(path)?;
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)
         .from_reader(file);
@@ -274,4 +274,29 @@ fn read_synthetic_data() -> Result<Vec<ProductRecord>, Box<dyn std::error::Error
     }
 
     Ok(records)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_csv_generation_and_reading() {
+        let test_path = "data/product_prices_test.csv";
+        let _ = fs::remove_file(test_path);
+
+        // Test generation
+        generate_synthetic_data(test_path, 10).expect("Failed to generate test synthetic data");
+        assert!(Path::new(test_path).exists());
+
+        // Test reading
+        let records = read_synthetic_data(test_path).expect("Failed to read test synthetic data");
+        assert_eq!(records.len(), 10);
+        assert_eq!(records[0].name, "Product #0001");
+        assert!(records[0].price >= 10 && records[0].price < 1000);
+
+        // Clean up test file
+        let _ = fs::remove_file(test_path);
+    }
 }

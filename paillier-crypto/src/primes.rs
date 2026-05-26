@@ -81,3 +81,35 @@ pub fn generate_prime(bits: usize) -> BigUint {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_prime_small_primes() {
+        let primes = [2u32, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 61, 79, 97];
+        for &p in &primes {
+            assert!(is_prime(&BigUint::from(p), 40), "{} should be prime", p);
+        }
+    }
+
+    #[test]
+    fn test_is_prime_small_composites() {
+        let composites = [0u32, 1, 4, 6, 8, 9, 10, 12, 14, 15, 25, 49, 100];
+        for &c in &composites {
+            assert!(!is_prime(&BigUint::from(c), 40), "{} should be composite", c);
+        }
+    }
+
+    #[test]
+    fn test_generate_prime_bit_lengths() {
+        let bit_sizes = [64, 128];
+        for &bits in &bit_sizes {
+            let p = generate_prime(bits);
+            assert!(is_prime(&p, 40), "Generated prime {} should be prime", p);
+            assert_eq!(p.bits() as usize, bits, "Bit length should be {}", bits);
+            assert_eq!(&p % 2u32, BigUint::one(), "Prime should be odd");
+        }
+    }
+}

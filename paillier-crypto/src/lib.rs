@@ -135,3 +135,57 @@ pub fn homomorphic_sum(ciphertexts: &[BigUint], n: &BigUint) -> BigUint {
     }
     sum_cipher
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use num_traits::{Zero, One};
+
+    #[test]
+    fn test_gcd() {
+        assert_eq!(gcd(BigUint::from(54u32), BigUint::from(24u32)), BigUint::from(6u32));
+        assert_eq!(gcd(BigUint::from(101u32), BigUint::from(103u32)), BigUint::one());
+        assert_eq!(gcd(BigUint::zero(), BigUint::from(5u32)), BigUint::from(5u32));
+    }
+
+    #[test]
+    fn test_mod_inverse() {
+        // 3^-1 mod 11 = 4
+        assert_eq!(mod_inverse(&BigUint::from(3u32), &BigUint::from(11u32)), Some(BigUint::from(4u32)));
+        // 6^-1 mod 9 doesn't exist
+        assert_eq!(mod_inverse(&BigUint::from(6u32), &BigUint::from(9u32)), None);
+        // 1^-1 mod 5 = 1
+        assert_eq!(mod_inverse(&BigUint::one(), &BigUint::from(5u32)), Some(BigUint::one()));
+    }
+
+    #[test]
+    fn test_paillier_roundtrip_and_homomorphic_sum() {
+        // Generate a 128-bit key pair (small for fast test execution)
+        let (pk, sk) = generate_keys(128);
+
+        let m1 = BigUint::from(42u32);
+        let m2 = BigUint::from(100u32);
+        let m3 = BigUint::from(7u32);
+
+        // Test basic encrypt/decrypt
+        let c1 = pk.encrypt(&m1);
+        let c2 = pk.encrypt(&m2);
+        let c3 = pk.encrypt(&m3);
+
+        let d1 = sk.decrypt(&c1, &pk);
+        let d2 = sk.decrypt(&c2, &pk);
+        let d3 = sk.decrypt(&c3, &pk);
+
+        assert_eq!(d1, m1);
+        assert_eq!(d2, m2);
+        assert_eq!(d3, m3);
+
+        // Test homomorphic summation
+        let ciphertexts = vec![c1, c2, c3];
+        let encrypted_sum = homomorphic_sum(&ciphertexts, &pk.n);
+        let decrypted_sum = sk.decrypt(&encrypted_sum, &pk);
+
+        let expected_sum = &m1 + &m2 + &m3;
+        assert_eq!(decrypted_sum, expected_sum);
+    }
+}

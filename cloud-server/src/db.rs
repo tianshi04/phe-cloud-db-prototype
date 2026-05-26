@@ -1,6 +1,12 @@
 use rusqlite::{params, Connection, Result};
 
+#[cfg(test)]
+const DB_PATH: &str = "cloud_db_test.sqlite";
+#[cfg(not(test))]
 const DB_PATH: &str = "cloud_db.sqlite";
+
+#[cfg(test)]
+pub static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Initializes the SQLite database and creates the necessary tables if they don't exist.
 pub fn init_db() -> Result<()> {
@@ -83,5 +89,56 @@ pub fn get_public_key_n() -> Result<Option<String>> {
         Ok(Some(row.get::<_, String>(0)?))
     } else {
         Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_all_db_operations() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        // Ensure clean slate by deleting test db if it exists
+        let _ = fs::remove_file(DB_PATH);
+
+        // 1. Test init_db
+        init_db().expect("Failed to initialize database");
+        assert!(std::path::Path::new(DB_PATH).exists(), "DB file was not created");
+
+        // 2. Test get_public_key_n on empty db
+        let pk = get_public_key_n().expect("Failed to get public key");
+        assert!(pk.is_none(), "Public key should be None initially");
+
+        // 3. Test set_public_key_n and get_public_key_n
+        set_public_key_n("1234567890").expect("Failed to set public key");
+        let pk = get_public_key_n().expect("Failed to get public key");
+        assert_eq!(pk, Some("1234567890".to_string()));
+
+        // 4. Test get_encrypted_prices on empty db
+        let prices = get_encrypted_prices().expect("Failed to get prices");
+        assert!(prices.is_empty(), "Prices list should be empty initially");
+
+        // 5. Test insert_products and get_encrypted_prices
+        let products = vec![
+            ("Product A".to_string(), "999999".to_string()),
+            ("Product B".to_string(), "888888".to_string()),
+        ];
+        insert_products(&products).expect("Failed to insert products");
+        let prices = get_encrypted_prices().expect("Failed to get prices");
+        assert_eq!(prices.len(), 2);
+        assert_eq!(prices[0], "999999");
+        assert_eq!(prices[1], "888888");
+
+        // 6. Test reset_db
+        reset_db().expect("Failed to reset database");
+        let pk_after = get_public_key_n().expect("Failed to get public key");
+        assert!(pk_after.is_none(), "Public key should be None after reset");
+        let prices_after = get_encrypted_prices().expect("Failed to get prices");
+        assert!(prices_after.is_empty(), "Prices list should be empty after reset");
+
+        // Clean up test file after test run
+        let _ = fs::remove_file(DB_PATH);
     }
 }
