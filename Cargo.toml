@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = [
+    "paillier-crypto",
+    "cloud-server",
+    "client-cli"
+]
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unused_variables = "warn"
+unused_imports = "warn"
+dead_code = "warn"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "warn"
+cognitive_complexity = "warn"
+# Allow some pedantic lints that are too strict for prototype math
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+similar_names = "allow"
+many_single_char_names = "allow"

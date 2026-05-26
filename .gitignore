@@ -1,0 +1,22 @@
+# Rust compiler outputs
+target/
+target_custom/
+Cargo.lock
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local databases and runtime outputs
+*.sqlite
+*.sqlite-journal
+*.db
+cloud_db.sqlite
+
+# Local synthetic datasets
+data/product_prices.csv
+
+# Agent state
+.agents/
