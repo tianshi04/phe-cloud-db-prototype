@@ -1,0 +1,16 @@
+[package]
+name = "cloud-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+paillier-crypto = { path = "../paillier-crypto" }
+axum = { version = "0.7", features = ["json"] }
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+num-bigint = { version = "0.4", features = ["serde"] }
+
+[lints]
+workspace = true
