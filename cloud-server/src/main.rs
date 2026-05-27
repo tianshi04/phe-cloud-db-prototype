@@ -274,11 +274,11 @@ mod tests {
         let (pk, sk) = paillier_crypto::generate_keys(128);
 
         // Encrypt some prices
-        let c1 = pk.encrypt(&BigUint::from(100u32));
-        let c2 = pk.encrypt(&BigUint::from(250u32));
+        let c1 = pk.encrypt(&BigUint::from(100u32)).unwrap();
+        let c2 = pk.encrypt(&BigUint::from(250u32)).unwrap();
 
         let payload = UploadRequest {
-            public_key_n: pk.n.to_string(),
+            public_key_n: pk.n().to_string(),
             products: vec![
                 EncryptedProductInput {
                     name: "Item 1".to_string(),
@@ -310,7 +310,7 @@ mod tests {
         let enc_sum = BigUint::from_str(enc_sum_str).unwrap();
 
         // Decrypt sum
-        let dec_sum = sk.decrypt(&enc_sum, &pk);
+        let dec_sum = sk.decrypt(&enc_sum).unwrap();
         assert_eq!(dec_sum, BigUint::from(350u32));
 
         teardown_db();
