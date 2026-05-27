@@ -20,10 +20,20 @@ impl PublicKey {
 
         // Generate random r in [1, n-1] coprime to n
         let mut rng = rand::thread_rng();
-        let r = rng.gen_biguint_range(&BigUint::one(), &self.n);
+        let r = loop {
+            let r = rng.gen_biguint_range(&BigUint::one(), &self.n);
+            if gcd(r.clone(), self.n.clone()) == BigUint::one() {
+                break r;
+            }
+        };
 
         // c = (g^m * r^n) mod n^2
-        let g_m = self.g.modpow(m, &n_sq);
+        // Optimization: if g = n + 1, g^m mod n^2 = (1 + m*n) mod n^2 (Binomial Theorem)
+        let g_m = if self.g == &self.n + BigUint::one() {
+            (BigUint::one() + m * &self.n) % &n_sq
+        } else {
+            self.g.modpow(m, &n_sq)
+        };
         let r_n = r.modpow(&self.n, &n_sq);
 
         (g_m * r_n) % &n_sq
@@ -187,5 +197,21 @@ mod tests {
 
         let expected_sum = &m1 + &m2 + &m3;
         assert_eq!(decrypted_sum, expected_sum);
+    }
+
+    #[test]
+    fn test_paillier_optimization_equivalence() {
+        let (pk, sk) = generate_keys(128);
+        let m = BigUint::from(12345u32);
+
+        // Verify that the optimized g^m mod n^2 formula (1 + m*n) matches the standard modpow for g = n + 1
+        let n_sq = &pk.n * &pk.n;
+        let g_m_opt = (BigUint::one() + &m * &pk.n) % &n_sq;
+        let g_m_std = pk.g.modpow(&m, &n_sq);
+        assert_eq!(g_m_opt, g_m_std);
+
+        // Verify that encrypt/decrypt roundtrip still functions correctly
+        let c = pk.encrypt(&m);
+        assert_eq!(sk.decrypt(&c, &pk), m);
     }
 }
