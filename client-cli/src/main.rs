@@ -104,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut encrypted_inputs = Vec::with_capacity(count);
         for p in &products {
             let m = BigUint::from(p.price);
-            let c = pk.encrypt(&m);
+            let c = pk.encrypt(&m).expect("encryption failed");
             encrypted_inputs.push(EncryptedProductInput {
                 name: p.name.clone(),
                 encrypted_price: c.to_string(),
@@ -123,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
 
         let upload_req = UploadRequest {
-            public_key_n: pk.n.to_string(),
+            public_key_n: pk.n().to_string(),
             products: encrypted_inputs,
         };
 
@@ -181,7 +181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // G. Decrypt and Verify
         print!("  [6/6] Decrypting and verifying cloud result... ");
         std::io::stdout().flush()?;
-        let decrypted_sum = sk.decrypt(&encrypted_sum, &pk);
+        let decrypted_sum = sk.decrypt(&encrypted_sum).expect("decryption failed");
         let expected_sum = BigUint::from(plaintext_sum);
 
         let verification_status = if decrypted_sum == expected_sum {
