@@ -3,19 +3,66 @@ pub mod primes;
 use num_bigint::{BigInt, BigUint, RandBigInt, Sign};
 use num_traits::{One, Zero};
 
+use std::fmt;
+
+/// An error that can occur in Paillier operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Error {
+    /// The plaintext message is invalid (must be 0 <= m < n).
+    InvalidPlaintext,
+    /// The ciphertext is invalid (must be 0 < c < n^2).
+    InvalidCiphertext,
+    /// Decryption experienced underflow.
+    Underflow,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::InvalidPlaintext => write!(f, "Invalid plaintext message: must be 0 <= m < n"),
+            Error::InvalidCiphertext => write!(f, "Invalid ciphertext: must be 0 < c < n^2"),
+            Error::Underflow => write!(f, "Decryption underflow: intermediate value u < 1"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 /// A Paillier Public Key.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PublicKey {
     /// The modulus n = p * q
-    pub n: BigUint,
+    n: BigUint,
     /// The generator g (standard is n + 1)
-    pub g: BigUint,
+    g: BigUint,
 }
 
 impl PublicKey {
+    /// Creates a new Paillier public key with modulus `n` and generator `g`.
+    pub fn new(n: BigUint, g: BigUint) -> Self {
+        Self { n, g }
+    }
+
+    /// Returns a reference to the modulus `n`.
+    pub fn n(&self) -> &BigUint {
+        &self.n
+    }
+
+    /// Returns a reference to the generator `g`.
+    pub fn g(&self) -> &BigUint {
+        &self.g
+    }
+
     /// Encrypts a plaintext message `m` (where 0 <= m < n) using this public key.
     /// Returns the ciphertext.
-    pub fn encrypt(&self, m: &BigUint) -> BigUint {
+    ///
+    /// # Errors
+    /// - Returns `Error::InvalidPlaintext` if the message `m` is greater than or equal to `n`.
+    pub fn encrypt(&self, m: &BigUint) -> Result<BigUint, Error> {
+        if m >= &self.n {
+            return Err(Error::InvalidPlaintext);
+        }
+
         let n_sq = &self.n * &self.n;
 
         // Generate random r in [1, n-1] coprime to n
@@ -36,33 +83,77 @@ impl PublicKey {
         };
         let r_n = r.modpow(&self.n, &n_sq);
 
-        (g_m * r_n) % &n_sq
+        Ok((g_m * r_n) % &n_sq)
     }
 }
 
 /// A Paillier Private Key.
+///
+/// # Security Considerations
+/// - **Timing Side-Channels:** The modular exponentiation (`modpow`) implemented in `num-bigint`
+///   is not guaranteed to be constant-time. For cryptographic production deployments, a constant-time
+///   exponentiation implementation should be used to protect against timing attacks.
+/// - **Ciphertext Authenticity:** Standard Paillier is homomorphic and malleable, meaning ciphertexts
+///   can be manipulated by an attacker (e.g. multiplied by a scalar to multiply the underlying plaintext)
+///   without detection. In a production environment, you should wrap the ciphertexts with authenticators
+///   (such as a MAC, digital signature, AEAD wrapper, or Zero-Knowledge proof of correctness).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PrivateKey {
     /// lambda = lcm(p-1, q-1)
-    pub lambda: BigUint,
-    /// mu = lambda^-1 mod n
-    pub mu: BigUint,
+    lambda: BigUint,
+    /// mu = L(g^lambda mod n^2)^-1 mod n
+    /// When g = n + 1, this simplifies to lambda^-1 mod n.
+    mu: BigUint,
+    /// The modulus n = p * q
+    n: BigUint,
 }
 
 impl PrivateKey {
-    /// Decrypts a ciphertext `c` (where 0 < c < n^2) using this private key and the public key.
+    /// Creates a new Paillier private key with `lambda`, `mu`, and modulus `n`.
+    pub fn new(lambda: BigUint, mu: BigUint, n: BigUint) -> Self {
+        Self { lambda, mu, n }
+    }
+
+    /// Returns a reference to lambda.
+    pub fn lambda(&self) -> &BigUint {
+        &self.lambda
+    }
+
+    /// Returns a reference to mu.
+    pub fn mu(&self) -> &BigUint {
+        &self.mu
+    }
+
+    /// Returns a reference to the modulus `n`.
+    pub fn n(&self) -> &BigUint {
+        &self.n
+    }
+
+    /// Decrypts a ciphertext `c` (where 0 < c < n^2) using this private key.
     /// Returns the decrypted plaintext message.
-    pub fn decrypt(&self, c: &BigUint, pk: &PublicKey) -> BigUint {
-        let n_sq = &pk.n * &pk.n;
+    ///
+    /// # Errors
+    /// - Returns `Error::InvalidCiphertext` if the ciphertext `c` is invalid (c == 0 or c >= n^2).
+    /// - Returns `Error::Underflow` if intermediate calculation `u` is less than 1.
+    pub fn decrypt(&self, c: &BigUint) -> Result<BigUint, Error> {
+        let n_sq = &self.n * &self.n;
+
+        // Validate ciphertext: must be 0 < c < n^2
+        if c.is_zero() || c >= &n_sq {
+            return Err(Error::InvalidCiphertext);
+        }
 
         // u = c^lambda mod n^2
         let u = c.modpow(&self.lambda, &n_sq);
 
         // L(u) = (u - 1) / n
-        let l_u = (&u - BigUint::one()) / &pk.n;
+        if u < BigUint::one() {
+            return Err(Error::Underflow);
+        }
+        let l_u = (&u - BigUint::one()) / &self.n;
 
         // m = (L(u) * mu) mod n
-        (l_u * &self.mu) % &pk.n
+        Ok((l_u * &self.mu) % &self.n)
     }
 }
 
@@ -126,10 +217,10 @@ pub fn generate_keys(bits: usize) -> (PublicKey, PrivateKey) {
 
         let g = &n + BigUint::one();
 
-        // For g = n + 1, mu = lambda^-1 mod n
+        // For g = n + 1, mu = L(g^lambda mod n^2)^-1 mod n simplifies to lambda^-1 mod n
         if let Some(mu) = mod_inverse(&lambda, &n) {
-            let pk = PublicKey { n: n.clone(), g };
-            let sk = PrivateKey { lambda, mu };
+            let pk = PublicKey::new(n.clone(), g);
+            let sk = PrivateKey::new(lambda, mu, n.clone());
             return (pk, sk);
         }
     }
@@ -178,13 +269,13 @@ mod tests {
         let m3 = BigUint::from(7u32);
 
         // Test basic encrypt/decrypt
-        let c1 = pk.encrypt(&m1);
-        let c2 = pk.encrypt(&m2);
-        let c3 = pk.encrypt(&m3);
+        let c1 = pk.encrypt(&m1).unwrap();
+        let c2 = pk.encrypt(&m2).unwrap();
+        let c3 = pk.encrypt(&m3).unwrap();
 
-        let d1 = sk.decrypt(&c1, &pk);
-        let d2 = sk.decrypt(&c2, &pk);
-        let d3 = sk.decrypt(&c3, &pk);
+        let d1 = sk.decrypt(&c1).unwrap();
+        let d2 = sk.decrypt(&c2).unwrap();
+        let d3 = sk.decrypt(&c3).unwrap();
 
         assert_eq!(d1, m1);
         assert_eq!(d2, m2);
@@ -192,8 +283,8 @@ mod tests {
 
         // Test homomorphic summation
         let ciphertexts = vec![c1, c2, c3];
-        let encrypted_sum = homomorphic_sum(&ciphertexts, &pk.n);
-        let decrypted_sum = sk.decrypt(&encrypted_sum, &pk);
+        let encrypted_sum = homomorphic_sum(&ciphertexts, pk.n());
+        let decrypted_sum = sk.decrypt(&encrypted_sum).unwrap();
 
         let expected_sum = &m1 + &m2 + &m3;
         assert_eq!(decrypted_sum, expected_sum);
@@ -205,13 +296,34 @@ mod tests {
         let m = BigUint::from(12345u32);
 
         // Verify that the optimized g^m mod n^2 formula (1 + m*n) matches the standard modpow for g = n + 1
-        let n_sq = &pk.n * &pk.n;
-        let g_m_opt = (BigUint::one() + &m * &pk.n) % &n_sq;
-        let g_m_std = pk.g.modpow(&m, &n_sq);
+        let n_sq = pk.n() * pk.n();
+        let g_m_opt = (BigUint::one() + &m * pk.n()) % &n_sq;
+        let g_m_std = pk.g().modpow(&m, &n_sq);
         assert_eq!(g_m_opt, g_m_std);
 
         // Verify that encrypt/decrypt roundtrip still functions correctly
-        let c = pk.encrypt(&m);
-        assert_eq!(sk.decrypt(&c, &pk), m);
+        let c = pk.encrypt(&m).unwrap();
+        assert_eq!(sk.decrypt(&c).unwrap(), m);
+    }
+
+    #[test]
+    fn test_paillier_encrypt_validation_too_large() {
+        let (pk, _sk) = generate_keys(128);
+        let invalid_m = pk.n() + BigUint::one();
+        assert_eq!(pk.encrypt(&invalid_m), Err(Error::InvalidPlaintext));
+    }
+
+    #[test]
+    fn test_paillier_decrypt_validation_zero() {
+        let (_pk, sk) = generate_keys(128);
+        let invalid_c = BigUint::zero();
+        assert_eq!(sk.decrypt(&invalid_c), Err(Error::InvalidCiphertext));
+    }
+
+    #[test]
+    fn test_paillier_decrypt_validation_too_large() {
+        let (pk, sk) = generate_keys(128);
+        let n_sq = pk.n() * pk.n();
+        assert_eq!(sk.decrypt(&n_sq), Err(Error::InvalidCiphertext));
     }
 }
