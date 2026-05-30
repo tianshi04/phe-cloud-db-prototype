@@ -249,11 +249,47 @@ fn generate_synthetic_data(path: &str, num_records: usize) -> Result<(), Box<dyn
     let mut file = File::create(path)?;
     writeln!(file, "name,price")?;
 
+    const BRANDS: &[&str] = &[
+        "Apple", "Samsung", "Sony", "Dell", "HP", "Lenovo", "ASUS", "Logitech", 
+        "Corsair", "Razer", "Anker", "Bose", "Nintendo", "Microsoft", "LG", "Google"
+    ];
+    const TYPES: &[&str] = &[
+        "Smartphone", "Laptop", "Tablet", "Smartwatch", "Earbuds", "Headphones", 
+        "Mouse", "Keyboard", "SSD", "Power Bank", "Monitor", "Webcam", "Speaker", "Camera"
+    ];
+    const MODIFIERS: &[&str] = &[
+        "Pro", "Air", "Ultra", "Max", "Plus", "Elite", "Wireless", "RGB", 
+        "Portable", "Compact", "Gen 2", "ANC", "4K", "OLED", "Mechanical", "Gaming"
+    ];
+
+    let mut names = std::collections::HashSet::new();
     let mut rng = rand::thread_rng();
-    for i in 1..=num_records {
-        // Generate random price between 10 and 1000
-        let price = rng.gen_range(10..1000);
-        writeln!(file, "Product #{:04},{}", i, price)?;
+
+    while names.len() < num_records {
+        let brand = BRANDS[rng.gen_range(0..BRANDS.len())];
+        let p_type = TYPES[rng.gen_range(0..TYPES.len())];
+        let modifier1 = MODIFIERS[rng.gen_range(0..MODIFIERS.len())];
+        let modifier2 = MODIFIERS[rng.gen_range(0..MODIFIERS.len())];
+        
+        let name = if modifier1 == modifier2 {
+            format!("{} {} {}", brand, p_type, modifier1)
+        } else {
+            format!("{} {} {} {}", brand, p_type, modifier1, modifier2)
+        };
+        
+        if names.insert(name.clone()) {
+            // Assign realistic prices based on product type to keep it meaningful
+            let price = match p_type {
+                "Laptop" => rng.gen_range(599..2499),
+                "Smartphone" => rng.gen_range(399..1299),
+                "Monitor" => rng.gen_range(199..899),
+                "Tablet" => rng.gen_range(199..799),
+                "Headphones" | "Earbuds" | "Camera" => rng.gen_range(99..499),
+                "Keyboard" | "Mouse" | "SSD" | "Speaker" | "Power Bank" | "Webcam" | "Smartwatch" => rng.gen_range(29..249),
+                _ => rng.gen_range(10..1000),
+            };
+            writeln!(file, "{},{}", name, price)?;
+        }
     }
 
     println!("Dataset generated successfully at '{}'.", path);
@@ -293,8 +329,8 @@ mod tests {
         // Test reading
         let records = read_synthetic_data(test_path).expect("Failed to read test synthetic data");
         assert_eq!(records.len(), 10);
-        assert_eq!(records[0].name, "Product #0001");
-        assert!(records[0].price >= 10 && records[0].price < 1000);
+        assert!(!records[0].name.is_empty());
+        assert!(records[0].price >= 10 && records[0].price <= 3000);
 
         // Clean up test file
         let _ = fs::remove_file(test_path);

@@ -15,8 +15,5 @@ Cargo.lock
 *.db
 cloud_db.sqlite
 
-# Local synthetic datasets
-data/product_prices.csv
-
 # Agent state
 .agents/
