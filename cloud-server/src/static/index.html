@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Mật mã Đồng cấu Paillier | Secure Cloud Database</title>
+    <!-- SEO Best Practices -->
+    <meta name="description" content="Hệ thống mô phỏng mật mã đồng cấu Paillier cho cơ sở dữ liệu đám mây. Bảo mật tuyệt đối phía Client, cộng đồng cấu an toàn phía Server.">
+    <meta name="keywords" content="Paillier, Homomorphic Encryption, Cryptography, Secure Database, CSDLPT, Dashboard, Neumorphic">
+    <meta name="theme-color" content="#FFC000">
+    <!-- Google Fonts & Style Sync -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/index.css">
+    
+    <!-- Bundled Official @material/web Components to Eliminate Network Lag (?bundle) -->
+    <script type="module">
+      import 'https://esm.sh/@material/web/button/filled-button.js?bundle';
+      import 'https://esm.sh/@material/web/button/outlined-button.js?bundle';
+      import 'https://esm.sh/@material/web/button/filled-tonal-button.js?bundle';
+      import 'https://esm.sh/@material/web/progress/linear-progress.js?bundle';
+    </script>
+</head>
+<body>
+    <!-- Premium background tech grid wallpaper -->
+    <div class="cyber-grid"></div>
+
+    <!-- =========================================================
+         MAIN CONTENT AREA (NO SIDEBAR, FULL WIDTH CENTERED)
+         ========================================================= -->
+    <main class="dashboard-main">
+        <!-- Top header bar with system title -->
+        <header class="dashboard-header">
+            <div class="welcome-section">
+                <h1>Hệ thống Mật mã Đồng cấu Paillier</h1>
+                <p>Mô phỏng Cơ sở dữ liệu đám mây an toàn | Bảo mật Client - Cộng đồng cấu Server</p>
+            </div>
+        </header>
+
+        <!-- Main Dashboard grid layout -->
+        <div class="dashboard-grid">
+            
+            <!-- ==========================================
+                 LEFT COLUMN (Key Manager, Uploader, Local Sum)
+                 ========================================== -->
+            <div class="grid-col-left">
+                
+                <!-- Card 2: Charcoal Dark Key Manager -->
+                <section class="dash-card dark-charcoal-card" aria-label="Quản lý khóa">
+                    <div class="dash-card-header">
+                        <h2>Quản lý khóa mật mã</h2>
+                        <span class="badge badge-gold-pill">Client-Only</span>
+                    </div>
+                    
+                    <p class="math-sub-desc" style="color: var(--text-dark-muted); margin-bottom: 1.25rem;">
+                        Khóa riêng tư nằm tại bộ nhớ trình duyệt, bảo vệ dữ liệu trước khi rời đi. Khuyên dùng: 256 bits.
+                    </p>
+
+                    <!-- Beautifully styled HTML Select for key-size dropdown -->
+                    <div class="key-size-container">
+                        <label for="key-size-select" class="key-size-label">Độ dài khóa (Key Size)</label>
+                        <select id="key-size-select" class="key-size-select">
+                            <option value="128">128 bits (Cực nhanh - Demo)</option>
+                            <option value="256" selected>256 bits (Khuyên dùng)</option>
+                            <option value="512">512 bits (Bảo mật cao)</option>
+                            <option value="1024">1024 bits (Bảo mật tối đa)</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-generate-gold" id="btn-generate-keys">
+                        KHỞI TẠO CẶP KHÓA MỚI
+                    </button>
+
+                    <!-- Stored keys representation -->
+                    <div class="key-display-vertical" id="key-info-container" style="display: none;">
+                        <div class="key-pill-block">
+                            <div class="key-pill-header">
+                                <span>Khóa công khai (n)</span>
+                                <span class="badge badge-gold">Public</span>
+                            </div>
+                            <div class="key-pill-value" id="pub-key-n" title="Click để copy khóa">N/A</div>
+                        </div>
+                        <div class="key-pill-block" style="border-color: rgba(255, 107, 107, 0.08);">
+                            <div class="key-pill-header">
+                                <span>Khóa riêng tư (λ)</span>
+                                <span class="badge" style="background: rgba(255, 107, 107, 0.1); color: var(--accent-coral);">Client</span>
+                            </div>
+                            <div class="key-pill-value" id="priv-key-lambda" title="Click để copy khóa">N/A</div>
+                        </div>
+                        <div class="key-pill-block" style="border-color: rgba(255, 107, 107, 0.08);">
+                            <div class="key-pill-header">
+                                <span>Khóa riêng tư (μ)</span>
+                                <span class="badge" style="background: rgba(255, 107, 107, 0.1); color: var(--accent-coral);">Client</span>
+                            </div>
+                            <div class="key-pill-value" id="priv-key-mu" title="Click để copy khóa">N/A</div>
+                        </div>
+                        <button class="btn-generate-gold" id="btn-export-keys" style="background: transparent; border: 1.5px solid var(--text-dark-muted); color: var(--text-dark-main); box-shadow: none; margin-top: 0.25rem;">
+                            Xuất tệp khóa (.json)
+                        </button>
+                    </div>
+
+                    <!-- Warnings if empty -->
+                    <div class="no-keys-alert-custom" id="no-keys-alert">
+                        Chưa có cặp khóa nào được tạo cục bộ. Vui lòng tạo khóa mới.
+                    </div>
+                </section>
+
+                <!-- Card 3: Ingestion & Upload Component -->
+                <section class="dash-card upload-card" aria-label="Trình tải lên dữ liệu">
+                    <div class="dash-card-header">
+                        <h2>Nhập & Mã hóa sản phẩm</h2>
+                        <span class="badge-cloud-status">Ingestion Console</span>
+                    </div>
+
+                    <div class="upload-layout-split">
+                        <!-- Single product form with elegant standard inputs -->
+                        <form class="single-upload-form" id="form-add-product">
+                            <input type="text" id="prod-name" class="form-input" placeholder="Tên sản phẩm..." required aria-label="Product Name">
+                            <input type="number" id="prod-price" class="form-input" min="0" placeholder="Giá gốc (Bản rõ)..." required aria-label="Product Plaintext Price">
+                            <button class="btn-upload-submit" type="submit" id="btn-add-product" disabled>
+                                Mã hóa & Tải lên Cloud
+                            </button>
+                        </form>
+
+                        <!-- CSV Drag and drop zone -->
+                        <div class="csv-drag-box" id="csv-drop-zone" title="Kéo thả file CSV vào đây để tải hàng loạt">
+                            <input type="file" id="csv-file-input" accept=".csv" class="hidden-file-input" style="display: none;" aria-label="Tải lên tệp CSV">
+                            
+                            <div class="csv-drag-text">Kéo thả CSV tại đây</div>
+                            <div class="csv-drag-subtext">Định dạng tên, giá sản phẩm</div>
+                            <button type="button" class="btn-csv-trigger" id="btn-trigger-file">Chọn tệp CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- Batch progress bar -->
+                    <div class="progress-container" id="csv-progress-container" style="display: none; border: none; background: transparent; padding: 0.5rem 0 0 0; margin-top: 0.75rem;">
+                        <div class="progress-header">
+                            <span id="csv-progress-text" style="font-weight: 700; color: var(--text-main);">Đang mã hóa...</span>
+                            <span id="csv-progress-percent" style="color: var(--accent-green);">0%</span>
+                        </div>
+                        <div style="margin-top: 0.25rem;">
+                            <md-linear-progress id="csv-progress-bar" value="0" style="--md-linear-progress-active-indicator-color: var(--accent-green); --md-linear-progress-track-color: rgba(0, 0, 0, 0.05);"></md-linear-progress>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Card 4: Local summation & comparative gauge -->
+                <section class="dash-card local-sum-card" aria-label="Tính toán tổng cục bộ">
+                    <div class="dash-card-header">
+                        <h2>Tính tổng cục bộ để đối chứng</h2>
+                    </div>
+
+                    <div class="local-sum-layout">
+                        <div class="local-sum-controls">
+                            <p class="math-sub-desc" style="margin-bottom: 0.5rem; max-width: 18rem;">
+                                Giải mã toàn bộ dữ liệu từ Cloud bằng Khóa riêng tư và tính tổng trên Local làm mốc đối chứng kiểm thử.
+                            </p>
+                            <button class="btn-local-calc" id="btn-calculate-local-sum" disabled>
+                                Tính tổng trên Local
+                            </button>
+                        </div>
+
+                        <!-- Gauge visual displaying similarity score -->
+                        <div class="gauge-visual-container">
+                            <svg class="gauge-svg" viewBox="0 0 100 100">
+                                <circle class="gauge-track" cx="50" cy="50" r="40"></circle>
+                                <circle class="gauge-fill" id="local-sum-gauge-fill" cx="50" cy="50" r="40"></circle>
+                            </svg>
+                            <div class="gauge-content">
+                                <div class="gauge-value" id="local-sum-val">0</div>
+                                <div class="gauge-label">Bản rõ</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- ==========================================
+                 RIGHT COLUMN (DB Storage, Sum Engine)
+                 ========================================== -->
+            <div class="grid-col-right">
+                
+                <!-- Card 5: Cloud Records Storage (WITH ONLINE STATUS, RESET & DECRYPT) -->
+                <section class="dash-card cloud-storage-card" aria-label="Cơ sở dữ liệu đám mây">
+                    <div class="dash-card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+                        <h2>Cơ sở dữ liệu đám mây</h2>
+                        <div class="cloud-storage-actions" style="flex-wrap: wrap; gap: 0.5rem;">
+                            <!-- ONLINE indicator -->
+                            <div class="status-indicator-pill" id="status-pill-container" style="padding: 0.5rem 1rem; font-size: 0.78rem;">
+                                <span id="server-status-dot"></span>
+                                <span id="server-status-text">ONLINE</span>
+                            </div>
+                            
+                            <!-- RESET DATABASE button is now extremely compact 'Reset' -->
+                            <button class="btn-reset-database" id="btn-reset-db" aria-label="Reset database to default" style="padding: 0.5rem 1.15rem; font-size: 0.78rem;">
+                                Reset
+                            </button>
+                            
+                            <!-- Decrypt table button is now extremely compact 'Giải mã' -->
+                            <button class="btn-decrypt-table-toggle" id="btn-decrypt-all-table" disabled style="padding: 0.5rem 1.15rem; font-size: 0.78rem;">
+                                Giải mã
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="math-sub-desc" style="margin-bottom: 0.5rem;">
+                        Nhấp vào Ciphertext thô của giá sản phẩm để sao chép.
+                    </p>
+
+                    <!-- Table styled beautifully as modern separate row capsules -->
+                    <div class="large-table-container">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên sản phẩm</th>
+                                    <th id="th-ciphertext">Ciphertext</th>
+                                    <th style="display: none;" id="th-plaintext">Plaintext</th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-table-body">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        Chưa có sản phẩm nào được tải lên Cloud.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-top: 0.75rem; text-align: right;">
+                        Tổng số sản phẩm: <span id="product-count" style="color: var(--text-main);">0</span>
+                    </div>
+                </section>
+
+                <!-- Card 6: Homomorphic Sum Engine -->
+                <section class="dash-card sum-engine-card" aria-label="Bộ xử lý đồng cấu đám mây">
+                    <div class="dash-card-header">
+                        <h2>Bộ xử lý đồng cấu Cloud</h2>
+                    </div>
+
+                    <!-- Micro Stats Grid -->
+                    <div class="sum-engine-stats">
+                        <div class="sum-stat-pill">
+                            <span class="sum-stat-num" id="stat-products-count">0</span>
+                            <span class="sum-stat-label">Sản phẩm</span>
+                        </div>
+                        <div class="sum-stat-pill">
+                            <span class="sum-stat-num" id="stat-key-status" style="font-size: 0.85rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Chưa có</span>
+                            <span class="sum-stat-label">Đồng bộ khóa</span>
+                        </div>
+                    </div>
+
+                    <!-- Cloud calculate button -->
+                    <button class="btn-sum-cloud" id="btn-calculate-sum" disabled>
+                        TÍNH TỔNG ĐỒNG CẤU TRÊN CLOUD
+                    </button>
+
+                    <!-- Results block -->
+                    <div class="sum-results-box" id="sum-results-area" style="display: none;">
+                        <span class="sum-results-label">Ciphertext Tổng nhận từ Cloud</span>
+                        <div class="sum-ciphertext-bubble" id="result-encrypted-sum" title="Click để copy ciphertext tổng">
+                            N/A
+                        </div>
+
+                        <button class="btn-decrypt-sum-gold" id="btn-decrypt-sum">
+                            GIẢI MÃ TỔNG ĐỒNG CẤU TẠI CLIENT
+                        </button>
+
+                        <!-- Verification card showing Match badge -->
+                        <div class="verification-card" id="decrypted-result-box" style="display: none; margin-top: 0.5rem;">
+                            <span class="sum-results-label" style="color: var(--accent-green);">Kết quả giải mã tổng</span>
+                            <div class="verification-val" id="decrypted-sum-val">0</div>
+                            <div class="verification-badge-pill" id="verification-status">
+                                KHỚP HOÀN TOÀN
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Card 7: Manual Cryptographic Calculator -->
+                <section class="dash-card manual-calc-card" aria-label="Bộ tính toán thủ công">
+                    <div class="dash-card-header">
+                        <h2>Bộ tính toán mật mã thủ công</h2>
+                        <span class="badge badge-gold-pill">Sandbox</span>
+                    </div>
+                    
+                    <p class="math-sub-desc" style="margin-bottom: 1.25rem;">
+                        Thực hiện mã hóa và giải mã Paillier bằng các tham số tự nhập. Tự động đồng bộ với khóa hiện tại.
+                    </p>
+
+                    <div class="manual-calc-grid">
+                        <!-- Phân đoạn Mã hóa thủ công -->
+                        <div class="manual-calc-section">
+                            <h3 class="manual-calc-section-title">Mã hóa thủ công</h3>
+                            
+                            <div class="manual-input-group">
+                                <label for="manual-m" class="manual-label">Bản rõ m</label>
+                                <input type="number" id="manual-m" class="form-input" placeholder="Số nguyên cần mã hóa (m)..." required>
+                            </div>
+                            
+                            <div class="manual-input-group">
+                                <label for="manual-pub-n" class="manual-label">Khóa công khai n</label>
+                                <input type="text" id="manual-pub-n" class="form-input font-mono" placeholder="Khóa công khai n..." required>
+                            </div>
+                            
+                            <button class="btn-manual-action" id="btn-manual-encrypt" type="button">
+                                Mã hóa
+                            </button>
+                            
+                            <div class="manual-result-box" id="manual-c-result-box" style="display: none;">
+                                <span class="manual-result-label">Ciphertext c (Bản mã)</span>
+                                <div class="manual-ciphertext-bubble" id="manual-c-result" title="Click để sao chép"></div>
+                            </div>
+                        </div>
+
+                        <!-- Phân đoạn Giải mã thủ công -->
+                        <div class="manual-calc-section">
+                            <h3 class="manual-calc-section-title">Giải mã thủ công</h3>
+                            
+                            <div class="manual-input-group">
+                                <label for="manual-c" class="manual-label">Ciphertext c</label>
+                                <input type="text" id="manual-c" class="form-input font-mono" placeholder="Bản mã cần giải mã (c)..." required>
+                            </div>
+                            
+                            <div class="manual-input-group-grid">
+                                <div class="manual-input-group">
+                                    <label for="manual-priv-lambda" class="manual-label">Khóa riêng tư λ</label>
+                                    <input type="text" id="manual-priv-lambda" class="form-input font-mono" placeholder="λ..." required>
+                                </div>
+                                <div class="manual-input-group">
+                                    <label for="manual-priv-mu" class="manual-label">Khóa riêng tư μ</label>
+                                    <input type="text" id="manual-priv-mu" class="form-input font-mono" placeholder="μ..." required>
+                                </div>
+                            </div>
+                            
+                            <div class="manual-input-group">
+                                <label for="manual-priv-n" class="manual-label font-mono">Tham số n</label>
+                                <input type="text" id="manual-priv-n" class="form-input font-mono" placeholder="Tham số n..." required>
+                            </div>
+                            
+                            <button class="btn-manual-action" id="btn-manual-decrypt" type="button">
+                                Giải mã
+                            </button>
+                            
+                            <div class="manual-result-box" id="manual-m-result-box" style="display: none;">
+                                <span class="manual-result-label">Bản rõ m (Sau giải mã)</span>
+                                <div class="manual-plaintext-bubble" id="manual-m-result" title="Click để sao chép"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- App JavaScript -->
+    <script src="/app.js"></script>
+    <!-- Toast Container for non-blocking notifications -->
+    <div id="toast-container" class="toast-container"></div>
+</body>
+</html>

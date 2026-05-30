@@ -7,9 +7,14 @@ use std::str::FromStr;
 
 pub fn create_app() -> Router {
     Router::new()
+        .route("/", axum::routing::get(serve_html))
+        .route("/index.css", axum::routing::get(serve_css))
+        .route("/app.js", axum::routing::get(serve_js))
         .route("/api/reset", post(handle_reset))
         .route("/api/upload", post(handle_upload))
         .route("/api/homomorphic-sum", post(handle_homomorphic_sum))
+        .route("/api/products", axum::routing::get(handle_get_products))
+        .route("/api/public-key", axum::routing::get(handle_get_public_key))
 }
 
 #[tokio::main]
@@ -217,6 +222,70 @@ async fn handle_homomorphic_sum() -> impl IntoResponse {
         }),
     )
         .into_response()
+}
+
+const INDEX_HTML: &str = include_str!("static/index.html");
+const INDEX_CSS: &str = include_str!("static/index.css");
+const APP_JS: &str = include_str!("static/app.js");
+
+async fn serve_html() -> impl IntoResponse {
+    axum::response::Html(INDEX_HTML)
+}
+
+async fn serve_css() -> impl IntoResponse {
+    (
+        [(axum::http::header::CONTENT_TYPE, "text/css; charset=utf-8")],
+        INDEX_CSS,
+    )
+}
+
+async fn serve_js() -> impl IntoResponse {
+    (
+        [(axum::http::header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        APP_JS,
+    )
+}
+
+async fn handle_get_products() -> impl IntoResponse {
+    match db::get_products() {
+        Ok(products) => (
+            StatusCode::OK,
+            Json(products),
+        ).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(GenericResponse {
+                status: "error".to_string(),
+                message: format!("Failed to retrieve products: {}", e),
+            }),
+        ).into_response(),
+    }
+}
+
+async fn handle_get_public_key() -> impl IntoResponse {
+    match db::get_public_key_n() {
+        Ok(Some(n)) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "status": "success",
+                "public_key_n": n,
+            })),
+        ).into_response(),
+        Ok(None) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "status": "success",
+                "public_key_n": null,
+            })),
+        ).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(GenericResponse {
+                status: "error".to_string(),
+                message: format!("Failed to retrieve public key: {}", e),
+            }),
+        ).into_response(),
+    }
 }
 
 #[cfg(test)]

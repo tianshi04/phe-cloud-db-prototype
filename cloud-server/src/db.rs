@@ -57,6 +57,32 @@ pub fn insert_products(products: &[(String, String)]) -> Result<()> {
     Ok(())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct Product {
+    pub id: i32,
+    pub name: String,
+    pub encrypted_price: String,
+}
+
+/// Retrieves all products from the database.
+pub fn get_products() -> Result<Vec<Product>> {
+    let conn = Connection::open(DB_PATH)?;
+    let mut stmt = conn.prepare("SELECT id, name, encrypted_price FROM encrypted_products")?;
+    let product_iter = stmt.query_map([], |row| {
+        Ok(Product {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            encrypted_price: row.get(2)?,
+        })
+    })?;
+
+    let mut products = Vec::new();
+    for product in product_iter {
+        products.push(product?);
+    }
+    Ok(products)
+}
+
 /// Retrieves all encrypted prices from the database.
 pub fn get_encrypted_prices() -> Result<Vec<String>> {
     let conn = Connection::open(DB_PATH)?;
@@ -131,12 +157,21 @@ mod tests {
         assert_eq!(prices[0], "999999");
         assert_eq!(prices[1], "888888");
 
+        let full_products = get_products().expect("Failed to get full products");
+        assert_eq!(full_products.len(), 2);
+        assert_eq!(full_products[0].name, "Product A");
+        assert_eq!(full_products[0].encrypted_price, "999999");
+        assert_eq!(full_products[1].name, "Product B");
+        assert_eq!(full_products[1].encrypted_price, "888888");
+
         // 6. Test reset_db
         reset_db().expect("Failed to reset database");
         let pk_after = get_public_key_n().expect("Failed to get public key");
         assert!(pk_after.is_none(), "Public key should be None after reset");
         let prices_after = get_encrypted_prices().expect("Failed to get prices");
         assert!(prices_after.is_empty(), "Prices list should be empty after reset");
+        let products_after = get_products().expect("Failed to get full products");
+        assert!(products_after.is_empty(), "Products list should be empty after reset");
 
         // Clean up test file after test run
         let _ = fs::remove_file(DB_PATH);

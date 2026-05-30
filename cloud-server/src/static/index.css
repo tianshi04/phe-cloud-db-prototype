@@ -1,0 +1,1178 @@
+/* ==========================================================================
+   PREMIUM CREAM & CHARCOAL DASHBOARD THEME (DRIBBBLE-STYLE)
+   Project: Paillier Homomorphic Encryption Cloud Database Prototype
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* Elegant Color Palette */
+  --bg-main: #F4F1EA;              /* Warm cream/beige background */
+  --card-bg: #FFFFFF;              /* Pure white card backgrounds */
+  --card-bg-subtle: #FDFDFD;       /* Subtly lighter card background */
+  --card-bg-dark: #1E2022;         /* Dark charcoal panel background */
+  --card-bg-dark-subtle: #242629;  /* Dark grey active elements */
+  
+  /* Text Colors */
+  --text-main: #1A1D20;            /* Almost black text */
+  --text-muted: #8E8E93;           /* Warm muted gray */
+  --text-dark-main: #F4F1EA;       /* Warm light text for dark panels */
+  --text-dark-muted: #A1A1A5;     /* Muted gray for dark panels */
+  
+  /* Accents */
+  --accent-gold: #FFC000;          /* Vibrant premium yellow/gold */
+  --accent-gold-rgb: 255, 192, 0;
+  --accent-gold-hover: #E0A800;
+  --accent-coral: #FF6B6B;         /* Soft red/coral for deletions */
+  --accent-coral-rgb: 255, 107, 107;
+  --accent-green: #34C759;         /* Secure Emerald Green */
+  --accent-green-rgb: 52, 199, 89;
+  --accent-blue: #0A84FF;          /* Tech Blue */
+  --accent-blue-rgb: 10, 132, 255;
+  
+  /* Layout & Spacing */
+  --radius-xl: 2.25rem;            /* Wide rounded corners for primary panels */
+  --radius-lg: 1.5rem;             /* Standard rounded corners for cards */
+  --radius-md: 1rem;               /* Medium rounded corners for buttons/fields */
+  --radius-sm: 0.5rem;             /* Small rounded corners for badges */
+  
+  /* Shadows & Depth */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 8px 24px rgba(26, 29, 32, 0.03);
+  --shadow-lg: 0 16px 40px rgba(26, 29, 32, 0.05);
+  --shadow-dark: 0 20px 48px rgba(0, 0, 0, 0.25);
+  --shadow-gold: 0 8px 20px rgba(255, 192, 0, 0.2);
+  
+  /* Typography */
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  
+  /* Motion */
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-fast: all 0.15s ease;
+}
+
+/* ==========================================================================
+   GLOBAL RESET & BASE STYLES
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-x: hidden;
+  position: relative;
+  line-height: 1.5;
+  padding: 3rem 1.5rem;
+}
+
+/* Subtle dashboard tech grid wallpaper (Very low opacity) */
+.cyber-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: 
+    radial-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   MAIN DASHBOARD GRID LAYOUT (CENTERED FULL-WIDTH CONTAINER)
+   ========================================================================== */
+.dashboard-main {
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0; /* Prevents flex children from breaking layouts */
+}
+
+/* Header styling matching the clean text and action from screenshot */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.welcome-section h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.welcome-section p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Premium Server Status indicator pill */
+.status-indicator-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-main);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 1.15rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+/* Dynamic status dots class map injected by app.js */
+.status-indicator-pill .status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  display: inline-block;
+  transition: var(--transition-smooth);
+}
+
+.status-indicator-pill .status-dot.green {
+  background-color: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+}
+
+.status-indicator-pill .status-dot.yellow {
+  background-color: var(--accent-gold);
+  box-shadow: 0 0 6px var(--accent-gold);
+}
+
+.status-indicator-pill .status-dot.red {
+  background-color: var(--accent-coral);
+  box-shadow: 0 0 6px var(--accent-coral);
+}
+
+/* Premium Charcoal Reset DB button (Reset) */
+.btn-reset-database {
+  background: var(--card-bg-dark);
+  color: var(--text-dark-main);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-reset-database:hover {
+  background: #000000;
+  transform: translateY(-1px);
+}
+
+/* Responsive grid layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .grid-col-left, .grid-col-right {
+    align-items: center; /* Căn giữa các card khi ở chế độ 1 cột */
+  }
+}
+
+.grid-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.grid-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   PREMIUM DASHBOARD CARDS
+   ========================================================================== */
+.dash-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition-smooth);
+  width: 100%;
+}
+
+.dash-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.dark-charcoal-card,
+.upload-card,
+.local-sum-card,
+.sum-engine-card {
+  max-width: 650px;
+}
+
+.cloud-storage-card {
+  max-width: 100%;
+}
+
+.dash-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.dash-card-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.2px;
+}
+
+/* Elegant gold tag for Client-Only */
+.badge-gold-pill {
+  background: var(--accent-gold);
+  color: var(--card-bg-dark);
+  font-weight: 800;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: var(--shadow-gold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   SPECIFIC CARD 2: DARK CHARCOAL KEY MANAGER (NO DROPDOWN SECTOR)
+   ========================================================================== */
+.dark-charcoal-card {
+  background: var(--card-bg-dark);
+  color: var(--text-dark-main);
+  box-shadow: var(--shadow-dark);
+}
+
+.dark-charcoal-card h2 {
+  color: var(--text-dark-main);
+}
+
+.math-sub-desc {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* Premium Key size selector container and dropdown styling */
+.key-size-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.key-size-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dark-muted);
+}
+
+.key-size-select {
+  background: var(--card-bg-dark-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-dark-main);
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  width: 100%;
+  appearance: none;
+  /* Premium inline gold arrow */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23FFC000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.1rem;
+}
+
+.key-size-select:focus {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 3px rgba(255, 192, 0, 0.12);
+}
+
+.btn-generate-gold {
+  background: var(--accent-gold);
+  color: var(--text-main);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  width: 100%;
+  box-shadow: var(--shadow-gold);
+}
+
+.btn-generate-gold:hover:not(:disabled) {
+  background: var(--accent-gold-hover);
+  transform: translateY(-1px);
+}
+
+.btn-generate-gold:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Styled Key display in Charcoal card */
+.key-display-vertical {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.key-pill-block {
+  background: var(--card-bg-dark-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: var(--transition-smooth);
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.key-pill-block:hover {
+  border-color: rgba(255, 192, 0, 0.25);
+  background: rgba(255, 192, 0, 0.02);
+}
+
+.key-pill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dark-muted);
+  margin-bottom: 0.25rem;
+}
+
+.key-pill-header .badge {
+  font-size: 0.6rem;
+  padding: 0.15rem 0.45rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dark-main);
+  border: none;
+}
+
+.key-pill-header .badge.badge-gold {
+  background: rgba(255, 192, 0, 0.15);
+  color: var(--accent-gold);
+}
+
+.key-pill-value {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-dark-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.key-pill-value:hover {
+  color: var(--accent-gold);
+}
+
+/* ==========================================================================
+   SPECIFIC CARD 3: SINGLE & BATCH PRODUCT UPLOAD (NO ICONS)
+   ========================================================================== */
+.upload-card {
+  min-height: 15rem;
+}
+
+.upload-layout-split {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 1.25rem;
+  flex-grow: 1;
+}
+
+@media (max-width: 600px) {
+  .upload-layout-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.single-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Premium standard form inputs */
+.form-input {
+  background: var(--card-bg-subtle);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-main);
+  outline: none;
+  transition: var(--transition-smooth);
+  width: 100%;
+}
+
+.form-input:focus {
+  border-color: var(--text-main);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-upload-submit {
+  background: var(--text-main);
+  color: var(--card-bg);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.8rem 1.25rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-upload-submit:hover:not(:disabled) {
+  background: #000000;
+  transform: translateY(-1px);
+}
+
+.btn-upload-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Clean dragging zone (NO ICONS) */
+.csv-drag-box {
+  border: 2px dashed rgba(0, 0, 0, 0.08);
+  background: var(--card-bg-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  position: relative;
+}
+
+.csv-drag-box:hover {
+  border-color: var(--text-main);
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.csv-drag-box.dragover {
+  border-color: var(--accent-green);
+  background: rgba(52, 199, 89, 0.03);
+}
+
+.csv-drag-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.csv-drag-subtext {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.btn-csv-trigger {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-csv-trigger:hover {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: var(--text-main);
+}
+
+/* ==========================================================================
+   SPECIFIC CARD 4: SECURE LOCAL COMPARISON GAUGE
+   ========================================================================== */
+.local-sum-card {
+  min-height: 11rem;
+  justify-content: space-between;
+}
+
+.local-sum-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-grow: 1;
+}
+
+.local-sum-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+
+.btn-local-calc {
+  border: 1.5px solid var(--text-main);
+  background: transparent;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  align-self: flex-start;
+}
+
+.btn-local-calc:hover:not(:disabled) {
+  background: var(--text-main);
+  color: var(--card-bg);
+}
+
+.btn-local-calc:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Custom progress-bar layout */
+.gauge-visual-container {
+  width: 9rem;
+  height: 9rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Beautiful circular gauge displaying local sum */
+.gauge-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.gauge-track {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.04);
+  stroke-width: 8;
+}
+
+.gauge-fill {
+  fill: none;
+  stroke: var(--accent-coral);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 251.2; /* 2 * PI * r (r=40) */
+  stroke-dashoffset: 251.2;
+  transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gauge-content {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gauge-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.gauge-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   SPECIFIC CARD 5: CLOUD DATABASE RECORD STORAGE
+   ========================================================================== */
+.cloud-storage-card {
+  flex-grow: 1;
+}
+
+.cloud-storage-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Core dynamic button classes from app.js */
+.btn {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.btn-secondary {
+  background: var(--card-bg-dark);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--accent-gold);
+}
+
+.btn-secondary:hover {
+  background: #000000;
+  color: var(--accent-gold-hover);
+}
+
+.btn-secondary.active {
+  background: var(--accent-gold);
+  color: var(--card-bg-dark);
+  box-shadow: var(--shadow-gold);
+}
+
+.btn-xs {
+  padding: 0.55rem 1.15rem;
+  font-size: 0.78rem;
+  border-radius: var(--radius-md);
+}
+
+.btn-decrypt-table-toggle {
+  background: var(--card-bg-dark);
+  color: var(--accent-gold);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-decrypt-table-toggle:hover:not(:disabled) {
+  background: #000000;
+}
+
+.btn-decrypt-table-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Custom styled Table styled as discrete separate rows (screenshot Habits style) */
+.large-table-container {
+  overflow-y: auto;
+  flex-grow: 1;
+  max-height: 38rem;
+  margin-top: 0.5rem;
+}
+
+.cyber-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.65rem; /* Separated capsules */
+}
+
+/* Hide table headers to match Habits sleek flat layout */
+.cyber-table thead {
+  display: none;
+}
+
+.cyber-table tbody tr {
+  background: var(--card-bg-subtle);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  transition: var(--transition-smooth);
+}
+
+.cyber-table tbody tr:hover {
+  transform: scale(1.01);
+  box-shadow: var(--shadow-sm);
+  background: #FDFCF9;
+}
+
+.cyber-table td {
+  padding: 1.1rem 1.25rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  font-size: 0.88rem;
+}
+
+.cyber-table td:first-child {
+  border-left: 1px solid rgba(0, 0, 0, 0.03);
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 5%;
+}
+
+.cyber-table td:nth-child(2) {
+  width: 30%;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.cyber-table td.ciphertext-cell {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-coral); /* Orange/Red ciphertexts in reference */
+  cursor: pointer;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: var(--transition-fast);
+}
+
+.cyber-table td.ciphertext-cell:hover {
+  color: #FF3B30;
+  text-decoration: underline;
+}
+
+/* Decrypted plaintext column styled beautifully */
+.cyber-table td.plaintext-cell {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--accent-green);
+  text-align: right;
+  width: 25%;
+}
+
+/* Empty row display */
+.text-center {
+  text-align: center !important;
+}
+.text-muted {
+  color: var(--text-muted) !important;
+}
+.py-4 {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+
+/* ==========================================================================
+   SPECIFIC CARD 6: HOMOMORPHIC SUM ENGINE
+   ========================================================================== */
+.sum-engine-card {
+  background: var(--card-bg-subtle);
+  border: 1.5px dashed rgba(0, 0, 0, 0.08);
+}
+
+.sum-engine-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.sum-stat-pill {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.sum-stat-num {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.sum-stat-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 0.15rem;
+}
+
+.btn-sum-cloud {
+  background: var(--accent-green);
+  color: var(--card-bg);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  width: 100%;
+}
+
+.btn-sum-cloud:hover:not(:disabled) {
+  background: #2EAF50;
+  transform: translateY(-1px);
+}
+
+.btn-sum-cloud:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Homomorphic summation results display area */
+.sum-results-box {
+  margin-top: 1.25rem;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sum-results-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sum-ciphertext-bubble {
+  background: var(--card-bg-dark);
+  color: var(--accent-gold);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  word-break: break-all;
+  max-height: 5.5rem;
+  overflow-y: auto;
+  cursor: pointer;
+}
+
+.btn-decrypt-sum-gold {
+  background: transparent;
+  border: 1.5px solid var(--accent-gold-hover);
+  color: var(--accent-gold-hover);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  width: 100%;
+}
+
+.btn-decrypt-sum-gold:hover {
+  background: var(--accent-gold);
+  color: var(--text-main);
+}
+
+/* Verification indicator card */
+.verification-card {
+  background: rgba(52, 199, 89, 0.05);
+  border: 1px solid rgba(52, 199, 89, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.verification-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--accent-green);
+}
+
+.verification-badge-pill {
+  background: var(--accent-green);
+  color: var(--card-bg);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  margin-top: 0.35rem;
+  box-shadow: 0 4px 10px rgba(52, 199, 89, 0.15);
+}
+
+/* ==========================================================================
+   ALERT MODULES & MISC UTILITIES
+   ========================================================================== */
+.no-keys-alert-custom {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 107, 107, 0.05);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-coral);
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+.badge-cloud-status {
+  background: rgba(10, 132, 255, 0.1);
+  color: var(--accent-blue);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   TOAST SYSTEM
+   ========================================================================== */
+.toast-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 1000;
+  max-width: 24rem;
+}
+
+.toast {
+  background: var(--card-bg);
+  border-left: 4px solid var(--text-muted);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  animation: slideInToast 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: var(--transition-smooth);
+}
+
+.toast-success { border-left-color: var(--accent-green); }
+.toast-warning { border-left-color: var(--accent-gold); }
+.toast-danger { border-left-color: var(--accent-coral); }
+.toast-info { border-left-color: var(--accent-blue); }
+
+@keyframes slideInToast {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ==========================================================================
+   SPECIFIC CARD 7: MANUAL CRYPTOGRAPHIC CALCULATOR (SANDBOX)
+   ========================================================================== */
+.manual-calc-card {
+  max-width: 650px;
+}
+
+.manual-calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .manual-calc-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+.manual-calc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.manual-calc-section-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  padding-bottom: 0.35rem;
+}
+
+.manual-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.manual-input-group-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.manual-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.btn-manual-action {
+  background: var(--card-bg-dark);
+  color: var(--text-dark-main);
+  border: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  width: 100%;
+  margin-top: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-manual-action:hover {
+  background: var(--accent-gold);
+  color: var(--card-bg-dark);
+  box-shadow: var(--shadow-gold);
+  transform: translateY(-1px);
+}
+
+.btn-manual-action:active {
+  transform: translateY(0);
+}
+
+.manual-result-box {
+  margin-top: 0.75rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.manual-result-label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.manual-ciphertext-bubble,
+.manual-plaintext-bubble {
+  background: var(--bg-main);
+  border: 1px dashed rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  word-break: break-all;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  color: var(--text-main);
+}
+
+.manual-ciphertext-bubble:hover,
+.manual-plaintext-bubble:hover {
+  background: rgba(255, 192, 0, 0.05);
+  border-color: var(--accent-gold);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
