@@ -4,6 +4,41 @@
  */
 
 // ==========================================
+// 0. WEB WORKER CRYPTO INTERFACE
+// ==========================================
+
+const cryptoWorker = new Worker('/crypto-worker.js');
+const pendingRequests = new Map();
+let nextRequestId = 1;
+
+cryptoWorker.onmessage = function(e) {
+    const { requestId, type, success, data, error, percent, current, total } = e.data;
+    const pending = pendingRequests.get(requestId);
+    if (pending) {
+        if (type === 'progress') {
+            if (pending.onProgress) {
+                pending.onProgress({ percent, current, total });
+            }
+            return;
+        }
+        pendingRequests.delete(requestId);
+        if (success) {
+            pending.resolve(data);
+        } else {
+            pending.reject(new Error(error));
+        }
+    }
+};
+
+function callWorker(action, payload, onProgress) {
+    return new Promise((resolve, reject) => {
+        const requestId = nextRequestId++;
+        pendingRequests.set(requestId, { resolve, reject, onProgress });
+        cryptoWorker.postMessage({ requestId, action, payload });
+    });
+}
+
+// ==========================================
 // 1. MATHEMATICAL BIGINT UTILITIES
 // ==========================================
 
@@ -294,7 +329,8 @@ const App = {
         isTableDecrypted: false,
         localSum: null,
         // Stores math parameters for products encrypted client-side in the current session
-        localVisStore: {}
+        localVisStore: {},
+        decryptedPrices: {} // Cache for decrypted prices to prevent blocking UI during render
     },
     
     // Initializer
@@ -484,12 +520,13 @@ const App = {
         
         const startTime = performance.now();
         try {
-            const keys = Paillier.generateKeys(bits);
+            const keys = await callWorker('generate_keys', { bits });
             const duration = (performance.now() - startTime).toFixed(1);
             console.log(`Generated ${bits}-bit keys in ${duration}ms locally.`);
             
             this.state.publicKey = keys.publicKey;
             this.state.privateKey = keys.privateKey;
+            this.state.decryptedPrices = {}; // Reset decryption cache for new keys
             
             // Save locally in localStorage
             localStorage.setItem("shadowdb_keys", JSON.stringify(keys));
@@ -699,14 +736,11 @@ const App = {
             let decryptedPriceTd = "";
             if (this.state.isTableDecrypted) {
                 let decryptedPrice = "N/A";
-                if (this.state.privateKey) {
-                    try {
-                        decryptedPrice = Paillier.decrypt(p.encrypted_price, this.state.privateKey);
-                        decryptedPrice = parseInt(decryptedPrice).toLocaleString();
-                    } catch (e) {
-                        console.error("Decrypt failed for product", p.name, e);
-                        decryptedPrice = "Lỗi khóa";
-                    }
+                const cachedDecrypted = this.state.decryptedPrices[p.name];
+                if (cachedDecrypted !== undefined) {
+                    decryptedPrice = parseInt(cachedDecrypted).toLocaleString();
+                } else if (this.state.privateKey) {
+                    decryptedPrice = "Đang giải mã...";
                 }
                 decryptedPriceTd = `<td class="plaintext-cell mono">${decryptedPrice}</td>`;
             }
@@ -760,7 +794,10 @@ const App = {
         
         try {
             // 1. Client-Side Paillier Encryption (Zero Knowledge!)
-            const encryptionResult = Paillier.encrypt(priceVal, this.state.publicKey.n);
+            const encryptionResult = await callWorker('encrypt_single', { price: priceVal, pubKeyN: this.state.publicKey.n });
+            
+            // Store the plaintext price in the decryption cache since client already knows it!
+            this.state.decryptedPrices[name] = priceVal.toString();
             
             // Save the exact parameters locally for the step-by-step visualizer
             this.state.localVisStore[name] = encryptionResult.visData;
@@ -848,38 +885,30 @@ const App = {
             this.csvProgressBar.value = 0;
             this.csvProgressText.innerText = `Đang mã hóa 0/${parsedProducts.length} sản phẩm...`;
             
-            const batchProducts = [];
-            const localVisStoreTemp = {};
-            
-            // Enforce microtask delays so progress bar actually animates smoothly
-            const batchSize = Math.max(1, Math.floor(parsedProducts.length / 50)); // divide to anim segments
-            
-            for (let idx = 0; idx < parsedProducts.length; idx++) {
-                const p = parsedProducts[idx];
-                
-                // Client-side Encrypt
-                const enc = Paillier.encrypt(p.price, this.state.publicKey.n);
-                batchProducts.push({
-                    name: p.name,
-                    encrypted_price: enc.ciphertext
-                });
-                localVisStoreTemp[p.name] = enc.visData;
-                
-                if (idx % batchSize === 0 || idx === parsedProducts.length - 1) {
-                    const pct = Math.round(((idx + 1) / parsedProducts.length) * 100);
-                    this.csvProgressPercent.innerText = `${pct}%`;
-                    this.csvProgressBar.value = pct / 100;
-                    this.csvProgressText.innerText = `Mã hóa và chuẩn bị: ${idx + 1}/${parsedProducts.length} sản phẩm...`;
-                    await new Promise(r => setTimeout(r, 5));
-                }
-            }
-            
-            // Upload to server
-            this.csvProgressText.innerText = `Đang đồng bộ hóa dữ liệu lên Cloud Database...`;
             try {
+                // Offload batch encryption to Web Worker
+                const result = await callWorker(
+                    'encrypt_batch',
+                    { products: parsedProducts, pubKeyN: this.state.publicKey.n },
+                    ({ percent, current, total }) => {
+                        this.csvProgressPercent.innerText = `${percent}%`;
+                        this.csvProgressBar.value = percent / 100;
+                        this.csvProgressText.innerText = `Mã hóa và chuẩn bị: ${current}/${total} sản phẩm...`;
+                    }
+                );
+                
+                const { products, localVisStore } = result;
+                
+                // Add the plaintext prices to our decryptedPrices cache immediately!
+                parsedProducts.forEach(p => {
+                    this.state.decryptedPrices[p.name] = p.price.toString();
+                });
+                
+                // Upload to server
+                this.csvProgressText.innerText = `Đang đồng bộ hóa dữ liệu lên Cloud Database...`;
                 const payload = {
                     public_key_n: this.state.publicKey.n,
-                    products: batchProducts
+                    products
                 };
                 
                 const res = await fetch("/api/upload", {
@@ -894,7 +923,7 @@ const App = {
                 }
                 
                 // Merge temporary session visualizers
-                Object.assign(this.state.localVisStore, localVisStoreTemp);
+                Object.assign(this.state.localVisStore, localVisStore);
                 
                 await this.fetchProducts();
                 this.showToast(`Đã mã hóa thành công ${parsedProducts.length} sản phẩm từ file CSV!`, "success");
@@ -923,6 +952,7 @@ const App = {
             this.state.isTableDecrypted = false;
             this.state.localSum = null;
             this.state.localVisStore = {};
+            this.state.decryptedPrices = {};
             
             const gaugeFill = document.getElementById("local-sum-gauge-fill");
             if (gaugeFill) {
@@ -1026,12 +1056,15 @@ const App = {
     },
     
     // Decrypt the homomorphic summation in browser
-    decryptHomomorphicSum() {
+    async decryptHomomorphicSum() {
         if (!this.state.privateKey || !this.state.encryptedSum) return;
+        
+        this.btnDecryptSum.disabled = true;
+        this.btnDecryptSum.innerText = "ĐANG GIẢI MÃ (LOCAL)...";
         
         try {
             const startTime = performance.now();
-            const decryptedVal = Paillier.decrypt(this.state.encryptedSum, this.state.privateKey);
+            const decryptedVal = await callWorker('decrypt_single', { ciphertext: this.state.encryptedSum, privateKey: this.state.privateKey });
             const duration = (performance.now() - startTime).toFixed(2);
             console.log(`Decrypted sum in ${duration}ms client-side.`);
             
@@ -1079,6 +1112,9 @@ const App = {
         } catch (e) {
             console.error("Decryption failed", e);
             this.showToast(`Lỗi giải mã: ${e.message}`, "danger");
+        } finally {
+            this.btnDecryptSum.disabled = false;
+            this.btnDecryptSum.innerText = "GIẢI MÃ TỔNG ĐỒNG CẤU TẠI CLIENT";
         }
     },
     
@@ -1152,9 +1188,36 @@ const App = {
     },
     
     // --- Table Decryption Toggle ---
-    toggleTableDecryption() {
+    async toggleTableDecryption() {
         if (!this.state.privateKey) return;
-        this.state.isTableDecrypted = !this.state.isTableDecrypted;
+        
+        if (!this.state.isTableDecrypted) {
+            // Turning it ON: decrypt any missing prices first
+            const productsToDecrypt = this.state.products.filter(p => this.state.decryptedPrices[p.name] === undefined);
+            if (productsToDecrypt.length > 0) {
+                this.btnDecryptAllTable.disabled = true;
+                this.btnDecryptAllTable.innerText = "Đang giải mã...";
+                try {
+                    const ciphertexts = productsToDecrypt.map(p => p.encrypted_price);
+                    const results = await callWorker('decrypt_batch', { ciphertexts, privateKey: this.state.privateKey });
+                    productsToDecrypt.forEach((p, idx) => {
+                        this.state.decryptedPrices[p.name] = results[idx];
+                    });
+                } catch (e) {
+                    console.error("Batch decryption failed", e);
+                    this.showToast("Lỗi giải mã bảng: " + e.message, "danger");
+                    this.btnDecryptAllTable.disabled = false;
+                    this.btnDecryptAllTable.innerText = "Giải mã";
+                    return;
+                } finally {
+                    this.btnDecryptAllTable.disabled = false;
+                }
+            }
+            this.state.isTableDecrypted = true;
+        } else {
+            // Turning it OFF
+            this.state.isTableDecrypted = false;
+        }
         
         if (this.btnDecryptAllTable) {
             this.btnDecryptAllTable.innerText = this.state.isTableDecrypted ? "Ẩn" : "Giải mã";
@@ -1166,15 +1229,23 @@ const App = {
     },
     
     // --- Local Plaintext Summation ---
-    calculateLocalSum() {
+    async calculateLocalSum() {
         if (!this.state.privateKey || this.state.products.length === 0) return;
         
+        this.btnCalculateLocalSum.disabled = true;
+        this.btnCalculateLocalSum.innerText = "Đang giải mã...";
+        
         try {
+            const startTime = performance.now();
+            const ciphertexts = this.state.products.map(p => p.encrypted_price);
+            const decryptedValues = await callWorker('decrypt_batch', { ciphertexts, privateKey: this.state.privateKey });
+            
             let sum = 0n;
-            this.state.products.forEach(p => {
-                const decVal = Paillier.decrypt(p.encrypted_price, this.state.privateKey);
+            decryptedValues.forEach(decVal => {
                 sum += BigInt(decVal);
             });
+            const duration = (performance.now() - startTime).toFixed(2);
+            console.log(`Decrypted ${ciphertexts.length} local items in ${duration}ms via Web Worker.`);
             
             this.state.localSum = sum.toString();
             if (this.localSumVal) {
@@ -1191,6 +1262,9 @@ const App = {
         } catch (e) {
             console.error("Local sum calculation failed", e);
             this.showToast("Lỗi tính tổng cục bộ: " + e.message, "danger");
+        } finally {
+            this.btnCalculateLocalSum.disabled = false;
+            this.btnCalculateLocalSum.innerText = "Tính tổng trên Local";
         }
     },
     
@@ -1229,7 +1303,7 @@ const App = {
         const manualMResult = document.getElementById("manual-m-result");
         
         if (btnManualEncrypt) {
-            btnManualEncrypt.addEventListener("click", () => {
+            btnManualEncrypt.addEventListener("click", async () => {
                 const mInput = document.getElementById("manual-m").value.trim();
                 const nInput = document.getElementById("manual-pub-n").value.trim();
                 const resultBox = document.getElementById("manual-c-result-box");
@@ -1252,7 +1326,10 @@ const App = {
                         return;
                     }
                     
-                    const result = Paillier.encrypt(mBI, nBI);
+                    btnManualEncrypt.disabled = true;
+                    btnManualEncrypt.innerText = "Đang mã hóa...";
+                    
+                    const result = await callWorker('encrypt_single', { price: mBI.toString(), pubKeyN: nBI.toString() });
                     if (manualCResult) {
                         manualCResult.innerText = result.ciphertext;
                     }
@@ -1263,12 +1340,15 @@ const App = {
                 } catch (e) {
                     console.error("Manual encryption error", e);
                     this.showToast("Lỗi mã hóa: " + e.message, "danger");
+                } finally {
+                    btnManualEncrypt.disabled = false;
+                    btnManualEncrypt.innerText = "Mã hóa";
                 }
             });
         }
         
         if (btnManualDecrypt) {
-            btnManualDecrypt.addEventListener("click", () => {
+            btnManualDecrypt.addEventListener("click", async () => {
                 const cInput = document.getElementById("manual-c").value.trim();
                 const lambdaInput = document.getElementById("manual-priv-lambda").value.trim();
                 const muInput = document.getElementById("manual-priv-mu").value.trim();
@@ -1298,7 +1378,10 @@ const App = {
                         n: nBI.toString()
                     };
                     
-                    const result = Paillier.decrypt(cBI, privKey);
+                    btnManualDecrypt.disabled = true;
+                    btnManualDecrypt.innerText = "Đang giải mã...";
+                    
+                    const result = await callWorker('decrypt_single', { ciphertext: cBI.toString(), privateKey: privKey });
                     if (manualMResult) {
                         manualMResult.innerText = result;
                     }
@@ -1309,6 +1392,9 @@ const App = {
                 } catch (e) {
                     console.error("Manual decryption error", e);
                     this.showToast("Lỗi giải mã: " + e.message, "danger");
+                } finally {
+                    btnManualDecrypt.disabled = false;
+                    btnManualDecrypt.innerText = "Giải mã";
                 }
             });
         }

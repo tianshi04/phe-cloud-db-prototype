@@ -10,6 +10,7 @@ pub fn create_app() -> Router {
         .route("/", axum::routing::get(serve_html))
         .route("/index.css", axum::routing::get(serve_css))
         .route("/app.js", axum::routing::get(serve_js))
+        .route("/crypto-worker.js", axum::routing::get(serve_worker))
         .route("/api/reset", post(handle_reset))
         .route("/api/upload", post(handle_upload))
         .route("/api/homomorphic-sum", post(handle_homomorphic_sum))
@@ -231,6 +232,7 @@ async fn handle_homomorphic_sum() -> impl IntoResponse {
 const INDEX_HTML: &str = include_str!("static/index.html");
 const INDEX_CSS: &str = include_str!("static/index.css");
 const APP_JS: &str = include_str!("static/app.js");
+const CRYPTO_WORKER_JS: &str = include_str!("static/crypto-worker.js");
 
 async fn serve_html() -> impl IntoResponse {
     axum::response::Html(INDEX_HTML)
@@ -247,6 +249,13 @@ async fn serve_js() -> impl IntoResponse {
     (
         [(axum::http::header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
         APP_JS,
+    )
+}
+
+async fn serve_worker() -> impl IntoResponse {
+    (
+        [(axum::http::header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        CRYPTO_WORKER_JS,
     )
 }
 
