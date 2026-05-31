@@ -392,6 +392,7 @@ const App = {
         this.btnCalculateSum = document.getElementById("btn-calculate-sum");
         this.sumResultsArea = document.getElementById("sum-results-area");
         this.resultEncryptedSum = document.getElementById("result-encrypted-sum");
+        this.sumCalcTime = document.getElementById("sum-calc-time");
         this.btnDecryptSum = document.getElementById("btn-decrypt-sum");
         this.decryptedResultBox = document.getElementById("decrypted-result-box");
         this.decryptedSumVal = document.getElementById("decrypted-sum-val");
@@ -1037,6 +1038,10 @@ const App = {
             
             this.state.encryptedSum = data.encrypted_sum;
             this.resultEncryptedSum.innerText = data.encrypted_sum;
+            
+            if (this.sumCalcTime && data.calculation_time_ms !== undefined) {
+                this.sumCalcTime.innerText = data.calculation_time_ms.toFixed(3);
+            }
             
             this.sumResultsArea.style.display = "flex";
             this.decryptedResultBox.style.display = "none";
