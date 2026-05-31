@@ -60,6 +60,7 @@ struct EncryptedProductInput {
 struct SumResponse {
     status: String,
     encrypted_sum: String,
+    calculation_time_ms: f64,
 }
 
 use axum::response::IntoResponse;
@@ -212,13 +213,16 @@ async fn handle_homomorphic_sum() -> impl IntoResponse {
     }
 
     // Execute zero-knowledge homomorphic summation
+    let start_calc = std::time::Instant::now();
     let encrypted_sum = paillier_crypto::homomorphic_sum(&ciphertexts, &pk_n);
+    let calculation_time_ms = start_calc.elapsed().as_secs_f64() * 1000.0;
 
     (
         StatusCode::OK,
         Json(SumResponse {
             status: "success".to_string(),
             encrypted_sum: encrypted_sum.to_string(),
+            calculation_time_ms,
         }),
     )
         .into_response()

@@ -44,13 +44,14 @@ struct SumResponse {
     encrypted_sum: String,
     #[serde(default)]
     message: String,
+    #[serde(default)]
+    calculation_time_ms: f64,
 }
 
 struct BenchmarkResult {
     key_size: usize,
     key_gen_ms: f64,
     encryption_ms: f64,
-    plaintext_sum_ms: f64,
     homomorphic_sum_ms: f64,
     verification: &'static str,
 }
@@ -79,26 +80,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
-    let key_sizes = vec![128, 256, 512, 1024];
+    // Measure Plaintext SUM Baseline once (constant for dataset)
+    let products = read_synthetic_data(CSV_PATH)?;
+    let count = products.len();
+
+    println!("\n=== BASELINE MEASUREMENT ===");
+    print!("Computing local Plaintext SUM (Constant Baseline)... ");
+    std::io::stdout().flush()?;
+    let start_plaintext = Instant::now();
+    let mut plaintext_sum = 0u64;
+    for p in &products {
+        plaintext_sum += p.price as u64;
+    }
+    let plaintext_sum_duration = start_plaintext.elapsed().as_secs_f64() * 1000.0;
+    println!(
+        "Done! SUM = {} ({:.4} ms)",
+        plaintext_sum, plaintext_sum_duration
+    );
+    println!("============================\n");
+
+    let key_sizes = vec![256, 512, 1024, 2048];
     let mut results = Vec::new();
 
     for &size in &key_sizes {
         println!("\n>>> Running Benchmark for Key Size: {} bits", size);
 
         // A. Key Generation
-        print!("  [1/6] Generating Keypair... ");
+        print!("  [1/5] Generating Keypair... ");
         std::io::stdout().flush()?;
         let start = Instant::now();
         let (pk, sk) = paillier_crypto::generate_keys(size);
         let key_gen_duration = start.elapsed().as_secs_f64() * 1000.0;
         println!("Done! ({:.2} ms)", key_gen_duration);
 
-        // B. Read Product Data
-        let products = read_synthetic_data(CSV_PATH)?;
-        let count = products.len();
-
-        // C. Local Encryption
-        print!("  [2/6] Encrypting {} prices locally... ", count);
+        // B. Local Encryption
+        print!("  [2/5] Encrypting {} prices locally... ", count);
         std::io::stdout().flush()?;
         let start = Instant::now();
         let mut encrypted_inputs = Vec::with_capacity(count);
@@ -113,8 +129,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let encryption_duration = start.elapsed().as_secs_f64() * 1000.0;
         println!("Done! ({:.2} ms)", encryption_duration);
 
-        // D. Upload to Server
-        print!("  [3/6] Uploading encrypted data to cloud server... ");
+        // C. Upload to Server
+        print!("  [3/5] Uploading encrypted data to cloud server... ");
         std::io::stdout().flush()?;
         // First reset server
         let _ = http_client
@@ -140,22 +156,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         println!("Done! (Stored securely in SQLite)");
 
-        // E. Plaintext SUM Baseline
-        print!("  [4/6] Computing local Plaintext SUM (Baseline)... ");
-        std::io::stdout().flush()?;
-        let start = Instant::now();
-        let mut plaintext_sum = 0u64;
-        for p in &products {
-            plaintext_sum += p.price as u64;
-        }
-        let plaintext_sum_duration = start.elapsed().as_secs_f64() * 1000.0;
-        println!(
-            "Done! SUM = {} ({:.4} ms)",
-            plaintext_sum, plaintext_sum_duration
-        );
-
-        // F. Call Cloud Server for Homomorphic SUM
-        print!("  [5/6] Requesting Zero-Knowledge SUM from server... ");
+        // D. Call Cloud Server for Homomorphic SUM
+        print!("  [4/5] Requesting Zero-Knowledge SUM from server... ");
         std::io::stdout().flush()?;
         let start = Instant::now();
         let sum_res = http_client
@@ -163,7 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .send()
             .await?;
 
-        let sum_duration = start.elapsed().as_secs_f64() * 1000.0;
+        let rtt_duration = start.elapsed().as_secs_f64() * 1000.0;
 
         if !sum_res.status().is_success() {
             let err_body: GenericResponse = sum_res.json().await?;
@@ -173,13 +175,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let sum_data: SumResponse = sum_res.json().await?;
         let encrypted_sum = BigUint::from_str(&sum_data.encrypted_sum)?;
+        let sum_duration = sum_data.calculation_time_ms;
         println!(
-            "Done! (Calculated by server mod n^2 in {:.2} ms)",
-            sum_duration
+            "Done! (Server computation: {:.4} ms | Network RTT: {:.2} ms)",
+            sum_duration, rtt_duration
         );
 
-        // G. Decrypt and Verify
-        print!("  [6/6] Decrypting and verifying cloud result... ");
+        // E. Decrypt and Verify
+        print!("  [5/5] Decrypting and verifying cloud result... ");
         std::io::stdout().flush()?;
         let decrypted_sum = sk.decrypt(&encrypted_sum).expect("decryption failed");
         let expected_sum = BigUint::from(plaintext_sum);
@@ -199,29 +202,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             key_size: size,
             key_gen_ms: key_gen_duration,
             encryption_ms: encryption_duration,
-            plaintext_sum_ms: plaintext_sum_duration,
             homomorphic_sum_ms: sum_duration,
             verification: verification_status,
         });
     }
 
     // 3. Print beautiful benchmark report
-    println!("\n================================================================================================");
-    println!("                                     FINAL BENCHMARK REPORT                                     ");
-    println!("================================================================================================");
-    println!("| Key Size (bits) | Keygen (ms) | Encrypt 1000 (ms) | Plaintext Sum (ms) | Homomorphic Sum (ms) | Verification |");
-    println!("|-----------------|-------------|-------------------|--------------------|----------------------|--------------|");
+    println!("\n========================================================================================");
+    println!("                                 FINAL BENCHMARK REPORT                                 ");
+    println!("========================================================================================");
+    println!("| Key Size (bits) | Keygen (ms) | Encrypt 1000 (ms) | Server Sum (ms)  | Verification |");
+    println!("|-----------------|-------------|-------------------|------------------|--------------|");
     for r in results {
         println!(
-            "| {:<15} | {:<11.2} | {:<17.2} | {:<18.4} | {:<20.2} | {:<12} |",
+            "| {:<15} | {:<11.2} | {:<17.2} | {:<16.4} | {:<12} |",
             r.key_size,
             r.key_gen_ms,
             r.encryption_ms,
-            r.plaintext_sum_ms,
             r.homomorphic_sum_ms,
             r.verification
         );
     }
+    println!("========================================================================================");
+    println!("Baseline Plaintext SUM (Constant): {} ({:.4} ms)", plaintext_sum, plaintext_sum_duration);
     println!("================================================================================================");
     println!("Notice: In Paillier cryptography, real prices are scaled to integers (e.g. cents).");
     println!("The server calculates the encrypted SUM securely using ciphertext multiplication modulo n^2.");
