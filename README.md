@@ -57,6 +57,8 @@ The project is designed as a modular **Cargo Workspace** for complete decoupling
 * **`client-cli` (Binary Crate):** Local driver and benchmarking harness.
   * Generates 1,000 synthetic products (`data/product_prices.csv`).
   * Runs a full automated benchmarking loop comparing different key sizes ($256$, $512$, $1024$, $2048$ bits).
+* **`scripts/hacker_mode_demo.py`:** Interactive hacker demonstration.
+  * Simulates an attacker attempting data dumping and tampering to prove the system's zero-knowledge security.
 
 ---
 
@@ -107,6 +109,12 @@ The server will initialize the SQLite database `cloud_db.sqlite` and begin liste
 In a separate terminal, launch the client runner:
 ```bash
 cargo run --release -p client-cli
+```
+
+### 3. Run the Hacker Mode Demo
+To simulate an attack on the database and demonstrate its security, run the interactive Python script:
+```bash
+python scripts/hacker_mode_demo.py
 ```
 
 ---
