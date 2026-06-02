@@ -56,7 +56,7 @@ The project is designed as a modular **Cargo Workspace** for complete decoupling
   * Performs zero-knowledge homomorphic products over ciphertexts.
 * **`client-cli` (Binary Crate):** Local driver and benchmarking harness.
   * Generates 1,000 synthetic products (`data/product_prices.csv`).
-  * Runs a full automated benchmarking loop comparing different key sizes ($128$, $256$, $512$, $1024$ bits).
+  * Runs a full automated benchmarking loop comparing different key sizes ($256$, $512$, $1024$, $2048$ bits).
 
 ---
 
@@ -117,12 +117,12 @@ Tested on a local machine in `--release` mode. The client encrypts 1,000 records
 
 | Key Size (bits) | Keygen (ms) | Encrypt 1000 (ms) | Plaintext Sum (ms) | Homomorphic Sum (ms) | Verification |
 |-----------------|-------------|-------------------|--------------------|----------------------|--------------|
-| 128             | 3.13        | 36.17             | 0.0028             | 1.82                 | PASSED       |
-| 256             | 6.34        | 95.70             | 0.0020             | 2.05                 | PASSED       |
-| 512             | 16.66       | 403.43            | 0.0035             | 3.63                 | PASSED       |
-| 1024            | 110.98      | 3095.40           | 0.0051             | 7.81                 | PASSED       |
+| 256             | 5.19        | 100.66            | 0.0005             | 0.4852               | PASSED       |
+| 512             | 12.33       | 428.39            | 0.0005             | 0.9600               | PASSED       |
+| 1024            | 30.59       | 2525.03           | 0.0005             | 2.8693               | PASSED       |
+| 2048 (NIST)     | 469.73      | 19479.96          | 0.0005             | 9.4058               | PASSED       |
 
 ### 🔍 Analysis of Results
-1. **Blistering Summation Speeds:** Performing a secure sum of 1,000 encrypted numbers on the cloud server takes **only 7.81 ms** under a 1024-bit key size! This is incredibly fast and demonstrates the extreme efficiency of the homomorphic multiplication property compared to heavy cryptographic operations.
-2. **The Encryption Bottleneck:** Encryption is the most compute-heavy phase. Encrypting 1,000 prices under 1024-bit keys takes 3.09 seconds due to modular exponentiation of massive numbers. However, because this is performed client-side and can be done incrementally or in parallel, it is perfectly practical.
-3. **Security vs. Speed Trade-off:** As key size doubles, encryption time increases roughly quadratically. 1024-bit keys provide robust, production-grade security, whereas smaller bit-sizes are ideal for ultra-fast, low-power IoT applications.
+1. **Blistering Summation Speeds:** Performing a secure sum of 1,000 encrypted numbers on the cloud server takes **only 9.41 ms** under a NIST-standard 2048-bit key size! This is incredibly fast and demonstrates the extreme efficiency of the homomorphic multiplication property compared to heavy cryptographic operations.
+2. **The Encryption Bottleneck:** Encryption is the most compute-heavy phase. Encrypting 1,000 prices under 2048-bit keys takes 19.48 seconds due to modular exponentiation of massive numbers. However, because this is performed client-side and can be done incrementally or in parallel, it is perfectly practical.
+3. **Security vs. Speed Trade-off:** As key size doubles, encryption time increases roughly quadratically. 2048-bit keys provide robust, production-grade security, whereas smaller bit-sizes (like 256 or 512 bits) are ideal for ultra-fast, low-power IoT applications but do not offer strong cryptographic security.
